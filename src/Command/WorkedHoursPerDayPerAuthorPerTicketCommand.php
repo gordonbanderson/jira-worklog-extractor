@@ -177,8 +177,6 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
         error_log('WORKED TIME: ' . print_r($worked_time, 1));
 
-        asdf;
-
         if (empty($worked_time)) {
             throw new \Exception("No matching issues found");
         }
@@ -189,6 +187,7 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
         ksort($worked_time);
 
         // Fill in empty days
+        // @todo check for side fx
         foreach($worked_time as $author => $worked_time_per_author) {
             $current_day_start = $start_timestamp;
             while ($current_day_start <= $end_timestamp) {
@@ -227,7 +226,10 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
     {
         // Find unique authors per label
         $unique_authors = array_keys($worked_time_label);
-        $sheet_headers = ["Date" => "date"];
+
+        error_log('UNIQUE AUTHORS: ' . print_r($unique_authors,1));
+        
+        $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'integer', 'Ticket Time' => 'string', 'Daily Time' => 'string', 'Comment' => 'string'];
         foreach ($unique_authors as $unique_author) {
             $sheet_headers[$unique_author] = "integer";
         }
@@ -235,16 +237,68 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
         $sheet_data_by_date = [];
         foreach ($worked_time_label as $author => $worked_time_days_of_author) {
-            foreach ($worked_time_days_of_author as $date => $value) {
-                if (!isset($sheet_data_by_date[$date])) {
-                    $sheet_data_by_date[$date] = array_merge([$date], array_fill(1, count($unique_authors), 0));
+            // error_log('T1 ' . print_r($worked_time_days_of_author, 1));
+
+            /*
+             * [GT-2182] => Array
+        (
+            [total_time] => 35
+            [entries] => Array
+                (
+                    [0] => Array
+                        (
+                            [time] => 30
+                            [comment] => Fixed vendor filter on deliveries report
+                        )
+
+                    [1] => Array
+                        (
+                            [time] => 5
+                            [comment] => Confirmed working on develop
+                        )
+
+                )
+
+        )
+
+             */
+
+            foreach ($worked_time_days_of_author as $date => $worklogEntries) {
+                error_log('T2 ' . print_r($worklogEntries, 1));
+                $sheet_data_by_date[] = [$date, null,null,null];
+                $timePerDay = 0;
+                if (!empty($worklogEntries)) {
+                    $tickets = array_keys($worklogEntries);
+                    error_log('Tickets ' . print_r($tickets, 1));
+                    foreach($tickets as $ticket) {
+                        error_log('TICKET!!! ' . $ticket);
+                        $details = $worklogEntries[$ticket];
+                        $entries = $details['entries'];
+                        foreach($entries as $entry) {
+                            $time = $entry['time'];
+                            $comment = $entry['comment'];
+                            $sheet_data_by_date[] = [null, $ticket,$time, null, null,  $comment];
+                        }
+
+                        $sheet_data_by_date[] = [null, null, null, $details['total_time'], null, null];
+                        $timePerDay += $details['total_time'];
+                        error_log('TOTAL TIME: ' . $details['total_time']);
+                        $sheet_data_by_date[] = [null, null, null, null, null, null];
+                    }
                 }
 
-                $sheet_data_by_date[$date][$unique_authors_map[$author] + 1] += $value;
+                $sheet_data_by_date[] = [null, null, null, null, $timePerDay, null];
+                $sheet_data_by_date[] = [null, null, null, null, null, null];
+                $sheet_data_by_date[] = [null, null, null, null, null, null];
+
             }
         }
 
         ksort($sheet_data_by_date);
+
+
+       // $sheet_data_by_date['2017-07-06'] = [null,2];
+        error_log(print_r($sheet_data_by_date, 1));
 
         return [$sheet_headers, $sheet_data_by_date];
     }

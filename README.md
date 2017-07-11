@@ -18,6 +18,10 @@ To run it:
 php app.php load-project-totals 2016-01-01 2016-03-31
 ````
 
+```bash
+php app.php worked-hours-per-day-per-author-per-ticket 2017-07-01 2017-07-11
+```
+
 Example command:
 ````bash
 php app.php load-project-totals 2016-01-01 2016-03-31

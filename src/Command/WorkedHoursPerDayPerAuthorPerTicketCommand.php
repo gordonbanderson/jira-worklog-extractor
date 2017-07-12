@@ -200,20 +200,15 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
             }
         }
 
-        list($sheet_headers, $sheet_data_by_date) = $this->convertWorkedTimeOfLabelToSheetFormat($worked_time);
+        list($sheet_headers, $sheet_data_by_date, $styles) = $this->convertWorkedTimeOfLabelToSheetFormat($worked_time);
 
         $writer->writeSheetHeader("sheet1", $sheet_headers);
 
-        $totals_row = [""];
-        for ($i = 1; $i < count($sheet_headers); $i++) {
-            $totals_row[] = "=ROUND(SUM(" . XLSXWriter::xlsCell(2, $i) . ":" . XLSXWriter::xlsCell(10000, $i) . ")/60,0)";
-        }
-        $writer->writeSheetRow("sheet1", $totals_row);
-
+        // styles don't seem to work for libre office :(
         foreach ($sheet_data_by_date as $row) {
-            $writer->writeSheetRow("sheet1", $row);
+            $style = array_shift($styles);
+            $writer->writeSheetRow("sheet1", $row, array( 'border'=>'left,right,top,bottom'));
         }
-
 
         $writer->writeToFile($input->getOption("output-file"));
     }
@@ -228,6 +223,10 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
         // Find unique authors per label
         $unique_authors = array_keys($worked_time_label);
 
+        $styles=[];
+        $styleNone = [];
+        $styleBold = ['font-style' => 'bold'];
+
         error_log('UNIQUE AUTHORS: ' . print_r($unique_authors,1));
         
         $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'string', 'Ticket Time' => 'string',
@@ -237,40 +236,17 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
       //  }
         $unique_authors_map = array_flip($unique_authors);
 
+        $overallTime = 0;
+
         $sheet_data_by_date = [];
         foreach ($worked_time_label as $author => $worked_time_days_of_author) {
-            // error_log('T1 ' . print_r($worked_time_days_of_author, 1));
-
-            /*
-             * [GT-2182] => Array
-        (
-            [total_time] => 35
-            [entries] => Array
-                (
-                    [0] => Array
-                        (
-                            [time] => 30
-                            [comment] => Fixed vendor filter on deliveries report
-                        )
-
-                    [1] => Array
-                        (
-                            [time] => 5
-                            [comment] => Confirmed working on develop
-                        )
-
-                )
-
-        )
-
-             */
-
-            ksort($worked_time_days_of_author);
+              ksort($worked_time_days_of_author);
 
             foreach ($worked_time_days_of_author as $date => $worklogEntries) {
                 error_log('T2 ' . print_r($worklogEntries, 1));
                 $dayOfWeek = Carbon::parse($date)->format('l');
                 $sheet_data_by_date[] = [$date, $dayOfWeek,null,null];
+                $styles[] = $styleBold;
                 $timePerDay = 0;
                 if (!empty($worklogEntries)) {
                     $tickets = array_keys($worklogEntries);
@@ -283,28 +259,41 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
                             $time = $entry['time'];
                             $comment = $entry['comment'];
                             $sheet_data_by_date[] = [null, $ticket,$time, null, null,  $comment];
+                            $styles[] = $styleNone;
                         }
 
                         $sheet_data_by_date[] = [null, null, null, $details['total_time'], null, null];
+                        $styles[] = $styleNone;
+
                         $timePerDay += $details['total_time'];
+                        $overallTime += $details['total_time'];
                         error_log('TOTAL TIME: ' . $details['total_time']);
                         $sheet_data_by_date[] = [null, null, null, null, null, null];
+                        $styles[] = $styleNone;
                     }
                 }
 
                 $sheet_data_by_date[] = [null, null, null, null, $timePerDay, null];
+                $styles[] = $styleNone;
+
                 $sheet_data_by_date[] = [null, null, null, null, null, null];
+                $styles[] = $styleNone;
+
                 $sheet_data_by_date[] = [null, null, null, null, null, null];
+                $styles[] = $styleNone;
 
             }
         }
 
         ksort($sheet_data_by_date);
 
+        $sheet_data_by_date[] = [null, null, null, 'Overall:', $overallTime, null];
+        $styles[] = $styleBold;
 
-       // $sheet_data_by_date['2017-07-06'] = [null,2];
+
+        // $sheet_data_by_date['2017-07-06'] = [null,2];
         error_log(print_r($sheet_data_by_date, 1));
 
-        return [$sheet_headers, $sheet_data_by_date];
+        return [$sheet_headers, $sheet_data_by_date, $styles];
     }
 }

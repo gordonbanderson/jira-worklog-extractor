@@ -263,6 +263,8 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
              */
 
+            ksort($worked_time_days_of_author);
+
             foreach ($worked_time_days_of_author as $date => $worklogEntries) {
                 error_log('T2 ' . print_r($worklogEntries, 1));
                 $sheet_data_by_date[] = [$date, null,null,null];

@@ -229,8 +229,8 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
         error_log('UNIQUE AUTHORS: ' . print_r($unique_authors,1));
         
-        $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'string', 'Ticket Time' => 'string',
-            'Daily Time' => 'string', 'Comment' => 'string'];
+        $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'integer', 'Ticket Time' => 'integer',
+            'Daily Time' => 'integer', 'Comment' => 'string'];
       //  foreach ($unique_authors as $unique_author) {
       //      $sheet_headers[$unique_author] = "integer";
       //  }
@@ -273,14 +273,22 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
                     }
                 }
 
-                $sheet_data_by_date[] = [null, null, null, null, $timePerDay, null];
-                $styles[] = $styleNone;
+                if (!empty($timePerDay)) {
+                    $sheet_data_by_date[] = [null, null, null, null, $timePerDay, null];
+                    $styles[] = $styleNone;
 
-                $sheet_data_by_date[] = [null, null, null, null, null, null];
-                $styles[] = $styleNone;
+                    $sheet_data_by_date[] = [null, null, null, null, null, null];
+                    $styles[] = $styleNone;
 
-                $sheet_data_by_date[] = [null, null, null, null, null, null];
-                $styles[] = $styleNone;
+                    $sheet_data_by_date[] = [null, null, null, null, null, null];
+                    $styles[] = $styleNone;
+                } else {
+                    $lastRow = end($sheet_data_by_date);
+                    $lastRow[3] = 'No work logged';
+                }
+
+
+
 
             }
         }

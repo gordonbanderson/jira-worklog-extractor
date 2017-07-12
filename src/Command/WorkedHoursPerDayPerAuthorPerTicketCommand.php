@@ -3,6 +3,7 @@
 
 namespace Jpastoor\JiraWorklogExtractor\Command;
 
+use Carbon\Carbon;
 use chobie\Jira\Api;
 use chobie\Jira\Issue;
 use Jpastoor\JiraWorklogExtractor\CachedHttpClient;
@@ -229,10 +230,11 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
         error_log('UNIQUE AUTHORS: ' . print_r($unique_authors,1));
         
-        $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'integer', 'Ticket Time' => 'string', 'Daily Time' => 'string', 'Comment' => 'string'];
-        foreach ($unique_authors as $unique_author) {
-            $sheet_headers[$unique_author] = "integer";
-        }
+        $sheet_headers = ["Date" => "date", 'Ticket' => 'string', 'Time' => 'string', 'Ticket Time' => 'string',
+            'Daily Time' => 'string', 'Comment' => 'string'];
+      //  foreach ($unique_authors as $unique_author) {
+      //      $sheet_headers[$unique_author] = "integer";
+      //  }
         $unique_authors_map = array_flip($unique_authors);
 
         $sheet_data_by_date = [];
@@ -267,7 +269,8 @@ class WorkedHoursPerDayPerAuthorPerTicketCommand extends Command
 
             foreach ($worked_time_days_of_author as $date => $worklogEntries) {
                 error_log('T2 ' . print_r($worklogEntries, 1));
-                $sheet_data_by_date[] = [$date, null,null,null];
+                $dayOfWeek = Carbon::parse($date)->format('l');
+                $sheet_data_by_date[] = [$date, $dayOfWeek,null,null];
                 $timePerDay = 0;
                 if (!empty($worklogEntries)) {
                     $tickets = array_keys($worklogEntries);
